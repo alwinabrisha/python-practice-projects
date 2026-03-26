@@ -1,0 +1,54 @@
+function autoReplyFromSheet() {
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet1");
+  const data = sheet.getDataRange().getValues();
+
+  const labelName = "Replied";
+  let label = GmailApp.getUserLabelByName(labelName);
+
+  if (!label) {
+    label = GmailApp.createLabel(labelName);
+  }
+
+  const threads = GmailApp.getInboxThreads(0, 10);
+
+  threads.forEach(thread => {
+
+    // ✅ Skip if already replied
+    if (thread.getLabels().some(l => l.getName() === labelName)) {
+      return;
+    }
+
+    const messages = thread.getMessages();
+    const lastMessage = messages[messages.length - 1];
+
+    const sender = lastMessage.getFrom();
+    const body = lastMessage.getPlainBody().toLowerCase();
+    const subject = lastMessage.getSubject().toLowerCase();
+
+    // ✅ Only for "for test"
+    if (!subject.includes("for test")) {
+      return;
+    }
+
+    let reply = "Sorry, I couldn't understand your question.";
+
+    for (let i = 1; i < data.length; i++) {
+
+      const keyword = data[i][0].toLowerCase();
+      const answer = data[i][1];
+
+      if (body.includes(keyword)) {
+        reply = answer;
+        break;
+      }
+    }
+
+    GmailApp.sendEmail(sender, "Re: " + subject, reply);
+
+    // ✅ Mark as replied
+    thread.addLabel(label);
+
+  });
+
+}
